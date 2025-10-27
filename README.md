@@ -1,240 +1,172 @@
 # C++ Python Bridge
 
-一个高性能、易用的C++调用Python代码的桥接库，基于pybind11构建。该库提供了简洁的API接口，让C++开发者能够轻松地在C++应用程序中集成和调用Python代码。
+A high-performance, easy-to-use C++ library for seamless interoperability between C++ and Python, built on the power of pybind11. This library provides a clean, modern C++ API for both calling Python from C++ and exposing C++ to Python.
 
-## 🚀 功能特性
+## 🚀 Core Features
 
-- **简单易用**: 提供直观的API接口，轻松实现C++与Python的互操作
-- **类型安全**: 自动处理C++和Python之间的类型转换，支持STL容器和自定义类型
-- **高性能**: 基于pybind11，提供接近原生的性能表现
-- **完善的错误处理**: 全面的异常处理和错误传播机制，支持自定义错误回调
-- **灵活配置**: 支持自定义类型转换器和错误处理策略
-- **跨平台**: 支持Windows、Linux和macOS
-- **现代C++**: 使用C++17标准，支持模板和RAII
+- **Bidirectional Communication**:
+    - **C++ calling Python**: Embed the Python interpreter in your C++ application. Load modules, call functions, and exchange complex data types with ease.
+    - **Python calling C++**: Expose C++ functions, classes, and constants as a native Python module, allowing Python scripts to leverage C++ performance.
+- **Powerful Type Conversion**: Automatic and extensible type conversion for a wide range of types, including:
+    - Primitives (`int`, `double`, `std::string`, etc.)
+    - STL Containers (`std::vector`, `std::map`, `std::tuple`, `std::optional`)
+    - NumPy arrays
+    - Custom user-defined types via a simple registration system.
+- **Robust Error Handling**: A comprehensive exception handling system that translates Python exceptions into C++ exceptions (and vice-versa), providing detailed error information including stack traces.
+- **Modern C++ Design**: Utilizes C++17 features for a clean, safe, and efficient API.
 
-## 📋 系统架构
+## 📋 System Architecture
 
-```
-┌─────────────────────────────────┐
-│         C++ 应用层              │
-├─────────────────────────────────┤
-│    PythonBridge 包装器层        │  ← 高级API接口
-├─────────────────────────────────┤
-│  PythonModule | PythonFunction  │  ← 模块和函数封装
-├─────────────────────────────────┤
-│  TypeConverter | ErrorHandler   │  ← 类型转换和错误处理
-├─────────────────────────────────┤
-│           pybind11              │  ← 底层绑定库
-├─────────────────────────────────┤
-│         Python 解释器           │
-└─────────────────────────────────┘
-```
+The library is composed of two main parts:
 
-## 🛠️ 环境要求
+1.  **C++ to Python Bridge**: For embedding Python in C++.
+    ```
+    ┌───────────────────────────────┐
+    │          C++ Application      │
+    ├───────────────────────────────┤
+    │        PythonBridge API       │  <-- High-level Facade
+    ├───────────────────────────────┤
+    │  PythonModule | PythonFunction│  <-- Module/Function Wrappers
+    └───────────────────────────────┘
+    ```
+2.  **Python to C++ Bridge**: For exposing C++ as a Python module.
+    ```
+    ┌───────────────────────────────┐
+    │          Python Scripts       │
+    ├───────────────────────────────┤
+    │     C++ Python Module (pyd)   │  <-- Generated via CppModuleWrapper
+    ├───────────────────────────────┤
+    │      CppModuleWrapper API     │  <-- C++ Binding Interface
+    └───────────────────────────────┘
+    ```
 
-- **C++**: C++17 或更高版本
-- **Python**: Python 3.6 或更高版本
-- **CMake**: CMake 3.12 或更高版本
-- **编译器**: 
-  - Windows: Visual Studio 2019 或更高版本
-  - Linux: GCC 7+ 或 Clang 6+
-  - macOS: Xcode 10+ 或 Clang 6+
+Under the hood, both bridges are powered by a shared core that handles type conversion, error handling, and the low-level `pybind11` interface.
 
-## 📦 快速开始
+## 🛠️ Requirements
 
-### 1. 克隆和编译
+- C++17 or higher
+- Python 3.6 or higher
+- CMake 3.12 or higher
+- A modern C++ compiler (Visual Studio 2019+, GCC 7+, Clang 6+)
+- `pybind11` is downloaded automatically by CMake.
+
+## 📦 Quick Start
+
+### 1. Build the Project
 
 ```bash
-# 克隆项目
+# Clone the project
 git clone <repository-url>
 cd CppFromPython
 
-# 创建构建目录
+# Configure and build using CMake
 mkdir build
 cd build
-
-# 配置和编译
 cmake ..
 cmake --build . --config Release
 ```
 
-### 2. 基本使用示例
+### 2. Example: C++ calling Python
 
-#### Python脚本 (math_operations.py)
+This example calls a Python function from C++.
+
+**Python Script (`examples/python_scripts/math_operations.py`)**
 ```python
 def add(a, b):
     return a + b
-
-def multiply(a, b):
-    return a * b
-
-def sum_list(numbers):
-    return sum(numbers)
 ```
 
-#### C++代码
+**C++ Code (`examples/main.cpp`)**
 ```cpp
 #include "python_bridge.h"
 #include <iostream>
+#include <vector>
 
 int main() {
     try {
-        // 初始化Python桥接
         cpppy_bridge::PythonBridge bridge;
-        bridge.initialize({"./python_scripts"});
+        bridge.initialize({"./examples/python_scripts"});
         
-        // 加载Python模块
         auto math_module = bridge.loadModule("math_operations");
         
-        // 调用Python函数
         double result = math_module->callFunction<double>("add", 10.5, 20.3);
-        std::cout << "Result: " << result << std::endl;  // 输出: 30.8
-        
-        // 处理容器类型
-        std::vector<double> numbers = {1.0, 2.0, 3.0, 4.0, 5.0};
-        double sum = math_module->callFunction<double>("sum_list", numbers);
-        std::cout << "Sum: " << sum << std::endl;  // 输出: 15.0
-        
+        std::cout << "Python says: 10.5 + 20.3 = " << result << std::endl;
     } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
+        std::cerr << "An error occurred: " << e.what() << std::endl;
     }
-    
     return 0;
 }
 ```
 
-## 🔧 核心组件
-
-### PythonBridge
-主要的桥接类，负责管理Python解释器和模块加载：
-```cpp
-cpppy_bridge::PythonBridge bridge;
-bridge.initialize({"./python_scripts"});
-auto module = bridge.loadModule("my_module");
+**Run the example:**
+```bash
+# From the build directory
+./example
 ```
 
-### PythonModule
-Python模块的封装类，提供函数调用接口：
+### 3. Example: Python calling C++
+
+This example exposes a C++ class to Python.
+
+**C++ Code (`examples/cpp_library.h`)**
 ```cpp
-auto result = module->callFunction<int>("my_function", arg1, arg2);
-bool has_func = module->hasFunction("function_name");
-```
+#pragma once
+#include <string>
 
-### PythonFunction
-Python函数的封装类，提供更便捷的调用方式：
-```cpp
-cpppy_bridge::PythonFunction func("module_name", "function_name");
-auto result = func.call<double>(1.0, 2.0);
-```
-
-### TypeConverter
-类型转换工具，支持C++和Python之间的自动类型转换：
-```cpp
-// 支持的类型包括：
-// - 基本类型: int, double, float, bool, string
-// - STL容器: vector, map, set, tuple
-// - 复杂类型: optional, variant
-// - NumPy数组
-```
-
-### ErrorHandler
-错误处理系统，提供异常捕获和错误回调：
-```cpp
-cpppy_bridge::ErrorHandler::setVerboseErrors(true);
-cpppy_bridge::ErrorHandler::addErrorCallback([](const auto& error) {
-    std::cout << "Python Error: " << error.message << std::endl;
-});
-```
-
-## 📚 高级功能
-
-### 1. 自定义类型转换
-```cpp
-// 注册自定义类型转换器
-REGISTER_CUSTOM_TYPE_CONVERTER(
-    MyCustomType,
-    [](const MyCustomType& obj) { return py::cast(obj); },
-    [](const py::object& obj) { return obj.cast<MyCustomType>(); }
-);
-```
-
-### 2. 错误处理和安全执行
-```cpp
-// 安全执行Python代码
-auto result = cpppy_bridge::ErrorHandler::safeExecuteOptional([&]() {
-    return module->callFunction<double>("risky_function");
-});
-
-if (result.has_value()) {
-    std::cout << "Result: " << result.value() << std::endl;
-} else {
-    std::cout << "Function execution failed" << std::endl;
+namespace example_lib {
+class MathCalculator {
+public:
+    double add(double a, double b) { return a + b; }
+};
 }
 ```
 
-### 3. NumPy数组支持
+**C++ Bindings (`examples/python_bindings.cpp`)**
 ```cpp
-// C++ vector 转 NumPy数组
-std::vector<double> data = {1.0, 2.0, 3.0, 4.0};
-auto numpy_array = cpppy_bridge::NumpyConverter::vectorToNumpy(data);
+#include "cpp_module_wrapper.h"
+#include "cpp_library.h"
 
-// NumPy数组转 C++ vector
-auto cpp_vector = cpppy_bridge::NumpyConverter::numpyToVector<double>(numpy_array);
+// Expose the 'example_cpp_lib' module to Python
+CPPPY_MODULE(example_cpp_lib_module, "An example C++ library")
+{
+    // Bind the MathCalculator class
+    pybind11::class_<example_lib::MathCalculator>(m, "MathCalculator")
+        .def(pybind11::init<>())
+        .def("add", &example_lib::MathCalculator::add, "Adds two numbers");
+}
 ```
 
-## 🧪 测试和示例
+**Python Script (`examples/python_scripts/run_python_to_cpp_example.py`)**
+```python
+# First, ensure the project is built
+# The module will be in the build/Debug or build/Release directory
+import sys
+# Add build path to sys.path
+sys.path.append('../../build/Debug') # Adjust path if necessary
 
-### 运行示例
+import example_cpp_lib_module
+
+calc = example_cpp_lib_module.MathCalculator()
+result = calc.add(10.5, 20.3)
+print(f"C++ says: 10.5 + 20.3 = {result}")
+```
+
+**Run the example:**
 ```bash
-# 在build目录中
-./example          # 运行示例程序
-./test_bridge       # 运行测试套件
+# From the project's root directory
+python examples/python_scripts/run_python_to_cpp_example.py
 ```
 
-### 示例功能
-- 基本函数调用
-- 容器操作（vector, map等）
-- 复杂数据结构处理
-- 错误处理演示
-- 函数包装器使用
-- 全局状态管理
+## 📖 Documentation
 
-## 📖 API文档
+For more detailed information, please refer to:
+- **[API Reference](docs/API_Reference.md)**: A detailed reference for all classes and functions.
+- **[Bidirectional Bridge Guide](docs/Bidirectional_Bridge_Guide.md)**: A comprehensive guide with tutorials and advanced usage examples.
 
-详细的API文档请参考：[API Reference](docs/API_Reference.md)
+## 🤝 Contributing
 
-## 🤝 贡献指南
+Contributions are welcome! Please follow the standard fork-and-pull-request workflow.
 
-1. Fork 本项目
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 开启 Pull Request
+## 📄 License
 
-## 📄 许可证
-
-本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
-
-## 🔗 相关链接
-
-- [pybind11 官方文档](https://pybind11.readthedocs.io/)
-- [Python C API 文档](https://docs.python.org/3/c-api/)
-- [CMake 官方文档](https://cmake.org/documentation/)
-
-## ❓ 常见问题
-
-### Q: 如何处理Python模块导入错误？
-A: 确保Python模块路径正确添加到搜索路径中，使用 `bridge.initialize({"path/to/modules"})` 或 `PythonInterpreter::getInstance().addModulePath()`。
-
-### Q: 支持哪些数据类型？
-A: 支持所有基本类型、STL容器、NumPy数组以及自定义类型（通过注册转换器）。
-
-### Q: 如何调试Python代码？
-A: 启用详细错误模式 `ErrorHandler::setVerboseErrors(true)` 和错误日志 `ErrorHandler::setErrorLogging(true)`。
-
-### Q: 性能如何？
-A: 基于pybind11，提供接近原生的性能，类型转换开销最小。
-
----
-
-**注意**: 本项目使用 `cpppy_bridge` 命名空间来避免与标准库的命名冲突。
+This project is licensed under the MIT License.

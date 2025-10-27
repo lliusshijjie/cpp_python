@@ -7,27 +7,27 @@
 
 namespace cpppy_bridge {
 
-// TypeConverter 实现
+// TypeConverter implementation
 
 template<typename T>
 py::object TypeConverter::toPython(const T& value) {
-    // 检查是否有自定义转换器
+    // Check for a custom converter
     if (CustomTypeRegistry::hasToPythonConverter<T>()) {
         return CustomTypeRegistry::convertToPython<T>(value);
     }
     
-    // 使用pybind11的默认转换
+    // Use pybind11's default conversion
     return py::cast(value);
 }
 
 template<typename T>
 T TypeConverter::fromPython(const py::object& obj) {
-    // 检查是否有自定义转换器
+    // Check for a custom converter
     if (CustomTypeRegistry::hasFromPythonConverter<T>()) {
         return CustomTypeRegistry::convertFromPython<T>(obj);
     }
     
-    // 使用pybind11的默认转换
+    // Use pybind11's default conversion
     return obj.cast<T>();
 }
 
@@ -50,7 +50,7 @@ std::optional<T> TypeConverter::safeCast(const py::object& obj) {
     }
 }
 
-// ComplexTypeConverter 实现
+// ComplexTypeConverter implementation
 
 template<typename T>
 py::object ComplexTypeConverter::vectorToPython(const std::vector<T>& vec) {
@@ -170,7 +170,7 @@ std::variant<Types...> ComplexTypeConverter::variantFromPython(const py::object&
     throw std::runtime_error("variantFromPython is not fully implemented");
 }
 
-// NumpyConverter 实现
+// NumpyConverter implementation
 
 template<typename T>
 py::array_t<T> NumpyConverter::vectorToNumpy(const std::vector<T>& vec) {
@@ -198,30 +198,22 @@ py::array_t<T> NumpyConverter::matrix2DToNumpy(const std::vector<std::vector<T>>
         return py::array_t<T>();
     }
     
-    size_t rows = matrix.size();
-    size_t cols = matrix[0].size();
+    const size_t rows = matrix.size();
+    const size_t cols = matrix[0].size();
     
-    // 检查矩阵是否为矩形
-    for (const auto& row : matrix) {
-        if (row.size() != cols) {
-            throw std::runtime_error("Matrix must be rectangular for NumPy conversion");
-        }
-    }
+    py::array_t<T> arr({rows, cols});
+    auto buf = arr.request();
     
-    // 创建连续内存布局
-    std::vector<T> flat_data;
-    flat_data.reserve(rows * cols);
-    
-    for (const auto& row : matrix) {
-        flat_data.insert(flat_data.end(), row.begin(), row.end());
-    }
-    
-    py::array_t<T> result({rows, cols});
-    auto buf = result.request();
     T* ptr = static_cast<T*>(buf.ptr);
-    std::memcpy(ptr, flat_data.data(), flat_data.size() * sizeof(T));
-
-    return result;
+    
+    for (size_t i = 0; i < rows; ++i) {
+        if (matrix[i].size() != cols) {
+            throw std::runtime_error("Inconsistent number of columns in 2D matrix");
+        }
+        std::copy(matrix[i].begin(), matrix[i].end(), ptr + i * cols);
+    }
+    
+    return arr;
 }
 
 template<typename T>
@@ -232,72 +224,66 @@ std::vector<std::vector<T>> NumpyConverter::numpyToMatrix2D(const py::array_t<T>
         throw std::runtime_error("Expected 2D array for matrix conversion");
     }
     
-    size_t rows = buf.shape[0];
-    size_t cols = buf.shape[1];
-    T* ptr = static_cast<T*>(buf.ptr);
+    const size_t rows = buf.shape[0];
+    const size_t cols = buf.shape[1];
     
     std::vector<std::vector<T>> result(rows, std::vector<T>(cols));
+    T* ptr = static_cast<T*>(buf.ptr);
     
     for (size_t i = 0; i < rows; ++i) {
-        for (size_t j = 0; j < cols; ++j) {
-            result[i][j] = ptr[i * cols + j];
-        }
+        std::copy(ptr + i * cols, ptr + (i + 1) * cols, result[i].begin());
     }
     
     return result;
 }
 
-// CustomTypeRegistry 实现
+// CustomTypeRegistry implementation
 
 template<typename CppType>
 void CustomTypeRegistry::registerToPython(std::function<py::object(const CppType&)> converter) {
-    std::string type_name = typeid(CppType).name();
-    s_to_python_converters[type_name] = [converter](const void* ptr) -> py::object {
-        return converter(*static_cast<const CppType*>(ptr));
-    };
+    s_to_python_converters[typeid(CppType).name()] = 
+        [converter](const void* value) -> py::object {
+            return converter(*static_cast<const CppType*>(value));
+        };
 }
 
 template<typename CppType>
 void CustomTypeRegistry::registerFromPython(std::function<CppType(const py::object&)> converter) {
-    std::string type_name = typeid(CppType).name();
-    s_from_python_converters[type_name] = [converter](const py::object& obj) -> void* {
-        return new CppType(converter(obj));
-    };
+    s_from_python_converters[typeid(CppType).name()] = 
+        [converter](const py::object& obj) -> void* {
+            return new CppType(converter(obj));
+        };
 }
 
 template<typename CppType>
 bool CustomTypeRegistry::hasToPythonConverter() {
-    std::string type_name = typeid(CppType).name();
-    return s_to_python_converters.find(type_name) != s_to_python_converters.end();
+    return s_to_python_converters.count(typeid(CppType).name()) > 0;
 }
 
 template<typename CppType>
 bool CustomTypeRegistry::hasFromPythonConverter() {
-    std::string type_name = typeid(CppType).name();
-    return s_from_python_converters.find(type_name) != s_from_python_converters.end();
+    return s_from_python_converters.count(typeid(CppType).name()) > 0;
 }
 
 template<typename CppType>
 py::object CustomTypeRegistry::convertToPython(const CppType& value) {
-    std::string type_name = typeid(CppType).name();
-    auto it = s_to_python_converters.find(type_name);
-    if (it != s_to_python_converters.end()) {
-        return it->second(&value);
+    auto it = s_to_python_converters.find(typeid(CppType).name());
+    if (it == s_to_python_converters.end()) {
+        throw std::runtime_error("No to-Python converter registered for this type");
     }
-    throw std::runtime_error("No registered converter for type: " + type_name);
+    return it->second(&value);
 }
 
 template<typename CppType>
 CppType CustomTypeRegistry::convertFromPython(const py::object& obj) {
-    std::string type_name = typeid(CppType).name();
-    auto it = s_from_python_converters.find(type_name);
-    if (it != s_from_python_converters.end()) {
-        void* ptr = it->second(obj);
-        CppType result = *static_cast<CppType*>(ptr);
-        delete static_cast<CppType*>(ptr);
-        return result;
+    auto it = s_from_python_converters.find(typeid(CppType).name());
+    if (it == s_from_python_converters.end()) {
+        throw std::runtime_error("No from-Python converter registered for this type");
     }
-    throw std::runtime_error("No registered converter for type: " + type_name);
+    void* ptr = it->second(obj);
+    CppType result = *static_cast<CppType*>(ptr);
+    delete static_cast<CppType*>(ptr);
+    return result;
 }
 
 } // namespace cpppy_bridge
