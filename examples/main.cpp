@@ -13,7 +13,7 @@ void demonstrateBasicFunctions() {
     try {
         // Create PythonBridge
         cpppy_bridge::PythonBridge bridge;
-        bridge.initialize({"./examples/python_scripts"});
+        bridge.initialize({"../../examples/python_scripts"});
         
         // Load math_operations module
         auto math_module = bridge.loadModule("math_operations");
@@ -55,7 +55,7 @@ void demonstrateContainerOperations() {
     
     try {
         cpppy_bridge::PythonBridge bridge;
-        bridge.initialize({"./examples/python_scripts"});
+        bridge.initialize({"../../examples/python_scripts"});
         
         auto math_module = bridge.loadModule("math_operations");
         if (!math_module) {
@@ -109,7 +109,7 @@ void demonstrateComplexDataStructures() {
     
     try {
         cpppy_bridge::PythonBridge bridge;
-        bridge.initialize({"./examples/python_scripts"});
+        bridge.initialize({"../../examples/python_scripts"});
         
         auto math_module = bridge.loadModule("math_operations");
         if (!math_module) {
@@ -165,7 +165,7 @@ void demonstrateErrorHandling() {
     
     try {
         cpppy_bridge::PythonBridge bridge;
-        bridge.initialize({"./examples/python_scripts"});
+        bridge.initialize({"../../examples/python_scripts"});
         
         auto math_module = bridge.loadModule("math_operations");
         if (!math_module) {
@@ -210,7 +210,7 @@ void demonstrateFunctionWrapper() {
     
     try {
         cpppy_bridge::PythonBridge bridge;
-        bridge.initialize({"./examples/python_scripts"});
+        bridge.initialize({"../../examples/python_scripts"});
 
         // Create function wrappers
          cpppy_bridge::PythonFunction add_func(bridge.loadModule("math_operations"), "add");
@@ -257,7 +257,7 @@ void demonstrateGlobalState() {
     
     try {
         cpppy_bridge::PythonBridge bridge;
-        bridge.initialize({"./examples/python_scripts"});
+        bridge.initialize({"../../examples/python_scripts"});
         
         auto math_module = bridge.loadModule("math_operations");
         if (!math_module) {

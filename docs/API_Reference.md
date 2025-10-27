@@ -37,45 +37,7 @@ A convenient wrapper for a single Python function.
 
 ---
 
-## Part 2: Python calling C++ (`<cpp_module_wrapper.h>`)
-
-This part of the API allows C++ code to be exposed as a native Python module.
-
-### `cpppy_bridge::CppModuleWrapper`
-The main class for defining a Python module in C++.
-
-- **`CppModuleWrapper(const std::string& module_name, const std::string& description = "")`**: Constructor for a new Python module.
-- **`template<typename Func> CppModuleWrapper& bind_function(const std::string& name, Func&& func, const std::string& docstring = "")`**: Binds a free function or lambda to the Python module.
-- **`template<typename Class> CppClassBinder<Class> bind_class(const std::string& name, const std::string& docstring = "")`**: Begins the binding process for a C++ class. Returns a `CppClassBinder` for chaining.
-- **`template<typename T> CppModuleWrapper& bind_constant(const std::string& name, const T& value)`**: Binds a C++ constant value to the Python module.
-- **`void register_module(bool force_reload = false)`**: Registers the completed module with the Python interpreter.
-
-### `cpppy_bridge::CppClassBinder<Class>`
-A helper class returned by `CppModuleWrapper::bind_class` to define a class's interface in Python.
-
-- **`template<typename... Args> CppClassBinder& constructor()`**: Binds a constructor for the class.
-- **`template<typename Func> CppClassBinder& method(const std::string& name, Func&& func, const std::string& docstring = "")`**: Binds a class member function.
-- **`template<typename Func> CppClassBinder& static_method(const std::string& name, Func&& func, const std::string& docstring = "")`**: Binds a static member function.
-- **`template<typename T> CppClassBinder& property(const std::string& name, T Class::* member)`**: Binds a public member variable as a read/write property.
-- **`template<typename G> CppClassBinder& property_readonly(const std::string& name, G&& getter)`**: Binds a read-only property using a getter function.
-- **`template<typename G, typename S> CppClassBinder& property(const std::string& name, G&& getter, S&& setter)`**: Binds a read/write property using getter and setter functions.
-
-### `CPPPY_MODULE` Macro
-A convenience macro to simplify module creation and registration.
-
-- **`CPPPY_MODULE(name, description)`**: Use this macro to define the entry point for your C++ module. It handles the necessary boilerplate for pybind11.
-    ```cpp
-    #include "cpp_module_wrapper.h"
-
-    CPPPY_MODULE(my_module, "A description of my module")
-    {
-        // Use 'm' to bind functions and classes
-        m.def("add", [](int a, int b) { return a + b; });
-    }
-    ```
----
-
-## Part 3: Shared Core
+## Part 2: Shared Core
 
 ### Type Conversion (`<type_converter.h>`)
 The library handles most type conversions automatically. For custom types, you can register a converter.

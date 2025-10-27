@@ -16,9 +16,6 @@ include_directories(${Python3_INCLUDE_DIRS})
 add_executable(cpp_to_python_example examples/main.cpp src/python_bridge.cpp src/type_converter.cpp src/error_handler.cpp)
 target_link_libraries(cpp_to_python_example PRIVATE ${Python3_LIBRARIES} pybind11::embed)
 
-# Create the Python extension module
-pybind11_add_module(example_cpp_lib_module SHARED examples/python_bindings.cpp examples/cpp_library.cpp)
-
 # Set Python path for the C++ to Python example
 target_compile_definitions(cpp_to_python_example PRIVATE
     PYTHON_EXECUTABLE="${Python3_EXECUTABLE}")
